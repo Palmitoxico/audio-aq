@@ -1,0 +1,12 @@
+[package]
+name = "telab-voip"
+version = "0.1.0"
+authors = ["Augusto Fraga Giachero <augustofg96@gmail.com>"]
+
+[dependencies]
+serialport = "3.3.0"
+cpal = "0.10.0"
+queues = "1.0.0"
+docopt = "1.1.0"
+serde = "1.0"
+serde_derive = "1.0"
