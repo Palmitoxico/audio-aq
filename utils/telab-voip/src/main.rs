@@ -142,33 +142,33 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
 				stream.write(&bits.to_le_bytes()).unwrap();
 				let mut buf = Vec::new();
 				for line in reader.lines() {
-					match line {
-						Ok(line) => {
-							decode_buffer(line.as_bytes(), &mut buf);
+                    match line {
+                        Ok(line) => {
+                            decode_buffer(line.as_bytes(), &mut buf);
 
-							/*
-							 * Only data via network if the buffer has
-							 * more than 512 bytes to avoid excessive
-							 * number of small TCP packets
-							 * (inefficient)
-							 */
-							if buf.len() >= 512 {
-								match stream.write(buf.as_slice()) {
-									Ok(_) => (),
-									Err(e) => {
-										eprintln!("Connection error: {}", e);
-										break;
-									},
-								};
-								buf.clear();
-							}
-						},
-						Err(e) => {
-							eprintln!("Serial port error: {}", e);
-							break;
-						},
-					}
-				}
+                            /*
+                             * Only data via network if the buffer has
+                             * more than 512 bytes to avoid excessive
+                             * number of small TCP packets
+                             * (inefficient)
+                             */
+                            if buf.len() >= 512 {
+                                match stream.write(buf.as_slice()) {
+                                    Ok(_) => (),
+                                    Err(e) => {
+                                        eprintln!("Connection error: {}", e);
+                                        break;
+                                    },
+                                };
+                                buf.clear();
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Serial port error: {}", e);
+                            break;
+                        },
+                    }
+                }
             }
             Err(e) => {
                 println!("Connection error: {}", e);
@@ -176,80 +176,80 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
         }
     }
 
-	/*
-	 * Close the socket
-	 */
+    /*
+     * Close the socket
+     */
     drop(listener);
 }
 
 fn client(ip_addr: &String, port: u16) {
-	let mut stream = match TcpStream::connect(format!("{}:{}", ip_addr, port)) {
-		Ok(s) => s,
-		Err(e) => {
-			eprintln!("Error when trying to connect with server: {}", e);
-			process::exit(1);
-		},
-	};
+    let mut stream = match TcpStream::connect(format!("{}:{}", ip_addr, port)) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Error when trying to connect with server: {}", e);
+            process::exit(1);
+        },
+    };
 
-	let mut sample_rate_raw = [0 as u8; 4];
-	match stream.read_exact(&mut sample_rate_raw) {
-		Ok(_) => (),
-		Err(e) => {
-			eprintln!("Read error: {}", e);
-			process::exit(1);
-		},
-	};
+    let mut sample_rate_raw = [0 as u8; 4];
+    match stream.read_exact(&mut sample_rate_raw) {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Read error: {}", e);
+            process::exit(1);
+        },
+    };
 
-	let mut bits_raw = [0 as u8; 1];
-	match stream.read_exact(&mut bits_raw) {
-		Ok(_) => (),
-		Err(e) => {
-			eprintln!("Read error: {}", e);
-			process::exit(1);
-		},
-	};
+    let mut bits_raw = [0 as u8; 1];
+    match stream.read_exact(&mut bits_raw) {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Read error: {}", e);
+            process::exit(1);
+        },
+    };
 
-	let _bits = bits_raw[0];
+    let _bits = bits_raw[0];
 
-	let sample_rate = u32::from_le_bytes(sample_rate_raw);
+    let sample_rate = u32::from_le_bytes(sample_rate_raw);
 
-	let host = cpal::default_host();
+    let host = cpal::default_host();
     let device = match host.default_output_device() {
-		Some(dev) => dev,
-		None => {
-			eprintln!("Failed to find a default audio output device");
-			process::exit(1);
-		},
-	};
+        Some(dev) => dev,
+        None => {
+            eprintln!("Failed to find a default audio output device");
+            process::exit(1);
+        },
+    };
 
     let format = cpal::Format {
-		channels: 1,
-		sample_rate: cpal::SampleRate(sample_rate),
-		data_type: cpal::SampleFormat::I16,
-	};
-	let event_loop = host.event_loop();
-	let stream_id = match event_loop.build_output_stream(&device, &format) {
+        channels: 1,
+        sample_rate: cpal::SampleRate(sample_rate),
+        data_type: cpal::SampleFormat::I16,
+    };
+    let event_loop = host.event_loop();
+    let stream_id = match event_loop.build_output_stream(&device, &format) {
         Ok(id) => id,
         Err(e) => {
             eprintln!("Failed to open the default audio output device: {}", e);
-			process::exit(1);
-		},
+            process::exit(1);
+        },
     };
 
-	/*
-	 * Encapsulates the tcp socket I/O operations into a BufReader
-	 * object to allow efficient data retrival
-	 */
-	let reader = &mut BufReader::new(stream);
+    /*
+     * Encapsulates the tcp socket I/O operations into a BufReader
+     * object to allow efficient data retrival
+     */
+    let reader = &mut BufReader::new(stream);
 
-	event_loop.play_stream(stream_id.clone()).unwrap();
+    event_loop.play_stream(stream_id.clone()).unwrap();
 
-	event_loop.run(move |id, result| {
+    event_loop.run(move |id, result| {
         let data = match result {
             Ok(data) => data,
             Err(err) => {
                 eprintln!("An error occurred on stream {:?}: {}", id, err);
-				process::exit(1);
+                process::exit(1);
             }
         };
 
@@ -257,18 +257,18 @@ fn client(ip_addr: &String, port: u16) {
             cpal::StreamData::Output { buffer: cpal::UnknownTypeOutputBuffer::I16(mut buffer) } => {
                 for sample in buffer.chunks_mut(format.channels as usize) {
                     for out in sample.iter_mut() {
-						{
-							let mut buf = [0u8; 2];
-							match reader.read_exact(&mut buf) {
-								Ok(_) => (),
-								Err(e) => {
-									eprintln!("Read error: {}", e);
-									process::exit(1);
-								},
-							};
-							let sample = i16::from_le_bytes(buf);
-							*out = sample;
-						}
+                        {
+                            let mut buf = [0u8; 2];
+                            match reader.read_exact(&mut buf) {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    eprintln!("Read error: {}", e);
+                                    process::exit(1);
+                                },
+                            };
+                            let sample = i16::from_le_bytes(buf);
+                            *out = sample;
+                        }
                     }
                 }
             },
@@ -281,15 +281,15 @@ fn main() {
     let usage = USAGE.replace("__PROGNAME__", &env::args().nth(0).unwrap());
     let args: Args = Docopt::new(usage).and_then(|d| d.deserialize()).unwrap_or_else(|e| e.exit());
 
-	/*
-	 * Start a client session or a server session
-	 */
-	if args.cmd_start_server {
-		server(&args.flag_s, args.flag_r, args.flag_p, args.flag_b);
-	} else if args.cmd_start_client {
-		client(&args.flag_d, args.flag_p);
-	} else {
-		eprintln!("Invalid arguments!");
-		process::exit(1);
-	}
+    /*
+     * Start a client session or a server session
+     */
+    if args.cmd_start_server {
+        server(&args.flag_s, args.flag_r, args.flag_p, args.flag_b);
+    } else if args.cmd_start_client {
+        client(&args.flag_d, args.flag_p);
+    } else {
+        eprintln!("Invalid arguments!");
+        process::exit(1);
+    }
 }
