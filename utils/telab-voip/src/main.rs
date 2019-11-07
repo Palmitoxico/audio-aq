@@ -165,7 +165,7 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
                         },
                         Err(e) => {
                             eprintln!("Serial port error: {}", e);
-                            break;
+                            process::exit(1);
                         },
                     }
                 }
