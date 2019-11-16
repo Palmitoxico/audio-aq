@@ -82,16 +82,17 @@ fn decode_char(c: u8) -> u8 {
     ret
 }
 
-fn decode_sample(l: u8, h: u8) -> i16 {
-    let ret = (decode_char(h) as i16) << 6 |
-    decode_char(l) as i16;
-    (ret - 2048) * 16
+fn decode_sample(l: u8, h: u8, b: u8) -> i16 {
+    let mut ret = (decode_char(h) as i32) << 6 |
+    decode_char(l) as i32;
+	ret &= 0xFFF000 >> b;
+    ((ret - 2048) * 16) as i16
 }
 
-fn decode_buffer(inbuf: &[u8], outq: &mut Vec<u8>) {
+fn decode_buffer(inbuf: &[u8], outq: &mut Vec<u8>, b: u8) {
     for ind in (0..inbuf.len()).step_by(2) {
         if ind + 1 < inbuf.len() {
-            let decoded = decode_sample(inbuf[ind], inbuf[ind + 1]);
+            let decoded = decode_sample(inbuf[ind], inbuf[ind + 1], b);
             outq.extend(&decoded.to_le_bytes());
         }
     }
@@ -144,7 +145,7 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
                 for line in reader.lines() {
                     match line {
                         Ok(line) => {
-                            decode_buffer(line.as_bytes(), &mut buf);
+                            decode_buffer(line.as_bytes(), &mut buf, bits);
 
                             /*
                              * Only data via network if the buffer has
@@ -281,13 +282,28 @@ fn main() {
     let usage = USAGE.replace("__PROGNAME__", &env::args().nth(0).unwrap());
     let args: Args = Docopt::new(usage).and_then(|d| d.deserialize()).unwrap_or_else(|e| e.exit());
 
+	let audio_bits = args.flag_b;
+	let serial_name = args.flag_s;
+	let tcp_port = args.flag_p;
+	let sample_rate = args.flag_r;
+	let ip_dest = args.flag_d;
+
+	if audio_bits < 1 || audio_bits > 12 {
+		eprintln!("Sample bit size should be between 1 and 12");
+		process::exit(1);
+	}
+	if sample_rate < 1000 || sample_rate > 48000 {
+		eprintln!("Sample rate should be between 1000 and 48000 [Hz]");
+		process::exit(1);
+	}
+
     /*
      * Start a client session or a server session
      */
     if args.cmd_start_server {
-        server(&args.flag_s, args.flag_r, args.flag_p, args.flag_b);
+        server(&serial_name, sample_rate, tcp_port, audio_bits);
     } else if args.cmd_start_client {
-        client(&args.flag_d, args.flag_p);
+        client(&ip_dest, tcp_port);
     } else {
         eprintln!("Invalid arguments!");
         process::exit(1);
