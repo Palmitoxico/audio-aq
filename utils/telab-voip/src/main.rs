@@ -133,6 +133,8 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
         },
     };
 
+	println!("Sample rate: {} Hz", sample_rate);
+	println!("Sample bit-depth: {} bits", bits);
     println!("Server listening on port {}", tcp_port);
 
     for stream in listener.incoming() {
@@ -210,9 +212,12 @@ fn client(ip_addr: &String, port: u16) {
         },
     };
 
-    let _bits = bits_raw[0];
-
+    let bits = bits_raw[0];
     let sample_rate = u32::from_le_bytes(sample_rate_raw);
+
+	println!("Connected to {}:{}", ip_addr, port);
+	println!("Sample rate: {} Hz", sample_rate);
+	println!("Sample bit-depth: {} bits", bits);
 
     let host = cpal::default_host();
     let device = match host.default_output_device() {
