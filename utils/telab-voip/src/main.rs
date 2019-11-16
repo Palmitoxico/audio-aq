@@ -65,83 +65,83 @@ struct Args {
 }
 
 fn decode_char(c: u8) -> u8 {
-	let mut ret: u8 = 0;
-	let alpha_len = 'z' as u8 - 'a' as u8;
+    let mut ret: u8 = 0;
+    let alpha_len = 'z' as u8 - 'a' as u8;
 
-	if c >= 'A' as u8 && c <= 'Z' as u8 {
-		ret = c - 'A' as u8;
-	} else if c >= 'a' as u8 && c <= 'z' as u8 {
-		ret = c - 'a' as u8 + alpha_len;
-	} else if c >= '0' as u8 && c <= '9' as u8 {
-		ret = c - '0' as u8 + 2*alpha_len;
-	} else if c == '+' as u8 {
-		ret = 62;
-	} else if c == '/' as u8 {
-		ret = 63;
-	}
-	ret
+    if c >= 'A' as u8 && c <= 'Z' as u8 {
+        ret = c - 'A' as u8;
+    } else if c >= 'a' as u8 && c <= 'z' as u8 {
+        ret = c - 'a' as u8 + alpha_len;
+    } else if c >= '0' as u8 && c <= '9' as u8 {
+        ret = c - '0' as u8 + 2*alpha_len;
+    } else if c == '+' as u8 {
+        ret = 62;
+    } else if c == '/' as u8 {
+        ret = 63;
+    }
+    ret
 }
 
 fn decode_sample(l: u8, h: u8) -> i16 {
-	let ret = (decode_char(h) as i16) << 6 |
-	decode_char(l) as i16;
-	(ret - 2048) * 16
+    let ret = (decode_char(h) as i16) << 6 |
+    decode_char(l) as i16;
+    (ret - 2048) * 16
 }
 
 fn decode_buffer(inbuf: &[u8], outq: &mut Vec<u8>) {
-	for ind in (0..inbuf.len()).step_by(2) {
-		if ind + 1 < inbuf.len() {
-			let decoded = decode_sample(inbuf[ind], inbuf[ind + 1]);
-			outq.extend(&decoded.to_le_bytes());
-		}
-	}
+    for ind in (0..inbuf.len()).step_by(2) {
+        if ind + 1 < inbuf.len() {
+            let decoded = decode_sample(inbuf[ind], inbuf[ind + 1]);
+            outq.extend(&decoded.to_le_bytes());
+        }
+    }
 }
 
 fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
-	let serial_settings: SerialPortSettings = Default::default();
+    let serial_settings: SerialPortSettings = Default::default();
     let mut port = match serialport::open_with_settings(&serialport_name, &serial_settings) {
-		Ok(p) => p,
-		Err(e) => {
-			eprintln!("Failed to open serial port '{}': {}", serialport_name, e);
-			process::exit(1);
-		},
-	};
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Failed to open serial port '{}': {}", serialport_name, e);
+            process::exit(1);
+        },
+    };
 
-	/*
-	 * Set serial port timeout to 2 seconds
-	 */
-	port.set_timeout(Duration::new(2, 0)).unwrap();
+    /*
+     * Set serial port timeout to 2 seconds
+     */
+    port.set_timeout(Duration::new(2, 0)).unwrap();
 
-	/*
-	 * Inform the sample rate to hardware
-	 */
-	port.write(sample_rate.to_string().as_bytes()).unwrap();
-	port.write(b"\n").unwrap();
+    /*
+     * Inform the sample rate to hardware
+     */
+    port.write(sample_rate.to_string().as_bytes()).unwrap();
+    port.write(b"\n").unwrap();
 
-	/*
-	 * Encapsulates the serial port I/O operations into a BufReader
-	 * object to allow efficient data retrival
-	 */
-	let reader = &mut BufReader::new(port);
+    /*
+     * Encapsulates the serial port I/O operations into a BufReader
+     * object to allow efficient data retrival
+     */
+    let reader = &mut BufReader::new(port);
 
-	let listener = match TcpListener::bind(format!("0.0.0.0:{}", tcp_port)) {
-		Ok(l) => l,
-		Err(e) => {
-			eprintln!("Failed to bind a socket: {}", e);
-			process::exit(1);
-		},
-	};
+    let listener = match TcpListener::bind(format!("0.0.0.0:{}", tcp_port)) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("Failed to bind a socket: {}", e);
+            process::exit(1);
+        },
+    };
 
-	println!("Server listening on port {}", tcp_port);
+    println!("Server listening on port {}", tcp_port);
 
-	for stream in listener.incoming() {
+    for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
                 println!("New connection: {}", stream.peer_addr().unwrap());
-				stream.write(&sample_rate.to_le_bytes()).unwrap();
-				stream.write(&bits.to_le_bytes()).unwrap();
-				let mut buf = Vec::new();
-				for line in reader.lines() {
+                stream.write(&sample_rate.to_le_bytes()).unwrap();
+                stream.write(&bits.to_le_bytes()).unwrap();
+                let mut buf = Vec::new();
+                for line in reader.lines() {
                     match line {
                         Ok(line) => {
                             decode_buffer(line.as_bytes(), &mut buf);
