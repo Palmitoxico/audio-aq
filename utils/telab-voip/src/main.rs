@@ -85,7 +85,7 @@ fn decode_char(c: u8) -> u8 {
 fn decode_sample(l: u8, h: u8, b: u8) -> i16 {
     let mut ret = (decode_char(h) as i32) << 6 |
     decode_char(l) as i32;
-	ret &= 0xFFF000 >> b;
+    ret &= 0xFFF000 >> b;
     ((ret - 2048) * 16) as i16
 }
 
@@ -133,8 +133,8 @@ fn server(serialport_name: &String, sample_rate: u32, tcp_port: u16, bits: u8) {
         },
     };
 
-	println!("Sample rate: {} Hz", sample_rate);
-	println!("Sample bit-depth: {} bits", bits);
+    println!("Sample rate: {} Hz", sample_rate);
+    println!("Sample bit-depth: {} bits", bits);
     println!("Server listening on port {}", tcp_port);
 
     for stream in listener.incoming() {
@@ -215,9 +215,9 @@ fn client(ip_addr: &String, port: u16) {
     let bits = bits_raw[0];
     let sample_rate = u32::from_le_bytes(sample_rate_raw);
 
-	println!("Connected to {}:{}", ip_addr, port);
-	println!("Sample rate: {} Hz", sample_rate);
-	println!("Sample bit-depth: {} bits", bits);
+    println!("Connected to {}:{}", ip_addr, port);
+    println!("Sample rate: {} Hz", sample_rate);
+    println!("Sample bit-depth: {} bits", bits);
 
     let host = cpal::default_host();
     let device = match host.default_output_device() {
@@ -287,20 +287,20 @@ fn main() {
     let usage = USAGE.replace("__PROGNAME__", &env::args().nth(0).unwrap());
     let args: Args = Docopt::new(usage).and_then(|d| d.deserialize()).unwrap_or_else(|e| e.exit());
 
-	let audio_bits = args.flag_b;
-	let serial_name = args.flag_s;
-	let tcp_port = args.flag_p;
-	let sample_rate = args.flag_r;
-	let ip_dest = args.flag_d;
+    let audio_bits = args.flag_b;
+    let serial_name = args.flag_s;
+    let tcp_port = args.flag_p;
+    let sample_rate = args.flag_r;
+    let ip_dest = args.flag_d;
 
-	if audio_bits < 1 || audio_bits > 12 {
-		eprintln!("Sample bit size should be between 1 and 12");
-		process::exit(1);
-	}
-	if sample_rate < 1000 || sample_rate > 48000 {
-		eprintln!("Sample rate should be between 1000 and 48000 [Hz]");
-		process::exit(1);
-	}
+    if audio_bits < 1 || audio_bits > 12 {
+        eprintln!("Sample bit size should be between 1 and 12");
+        process::exit(1);
+    }
+    if sample_rate < 1000 || sample_rate > 48000 {
+        eprintln!("Sample rate should be between 1000 and 48000 [Hz]");
+        process::exit(1);
+    }
 
     /*
      * Start a client session or a server session
